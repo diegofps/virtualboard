@@ -40,7 +40,7 @@ public:
 
     void paintEvent(QPaintEvent *);
 
-    void set_transparent(bool transparent);
+    void setTransparent(bool transparent);
 
     void mouseReleaseEvent(QMouseEvent *event);
 

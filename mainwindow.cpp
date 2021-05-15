@@ -14,7 +14,8 @@ MainWindow::MainWindow(QWidget *parent)
                 Qt::Dialog |
                 Qt::MSWindowsFixedSizeDialogHint |
                 Qt::FramelessWindowHint |
-                Qt::WindowStaysOnTopHint);
+                Qt::WindowStaysOnTopHint |
+                Qt::X11BypassWindowManagerHint);
 
     setAttribute(Qt::WA_NoSystemBackground, true);
     setAttribute(Qt::WA_TranslucentBackground, true);
@@ -35,7 +36,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::show(bool transparent)
 {
-    this->ui->board->set_transparent(transparent);
+    this->ui->board->setTransparent(transparent);
 
     QPoint cursor = QCursor::pos();
 
@@ -44,21 +45,34 @@ void MainWindow::show(bool transparent)
     if (screens.isEmpty())
         return;
 
+    qInfo("mouse: %d %d", cursor.x(), cursor.y());
+    for (int i=0;i!=screens.size();++i)
+    {
+        auto const & geometry = screens[i]->geometry();
+        qInfo("screen %d at %d, %d with %d, %d", i, geometry.topLeft().x(), geometry.topLeft().y(), geometry.width(), geometry.height());
+    }
+
     for (int i=0;i!=screens.size();++i)
     {
         auto const & geometry = screens[i]->geometry();
 
         if (!geometry.contains(cursor))
+        {
+            qInfo("Mouse not inside screen %d", i);
             continue;
+        }
+        else
+            qInfo("Inside screen %d", i);
 
+        QMainWindow::show();
         this->resize(geometry.width(), geometry.height());
         this->move(geometry.topLeft());
-        QMainWindow::show();
+        qInfo("Moving to %d, %d", geometry.topLeft().x(), geometry.topLeft().y());
         return;
     }
 
+    QMainWindow::show();
     auto const & geometry = screens.front()->geometry();
     this->resize(geometry.width(), geometry.height());
     this->move(geometry.topLeft());
-    QMainWindow::show();
 }

@@ -66,10 +66,10 @@ void DrawingBoard::paintBackground()
         buffer->fill(bgFill.color());
 }
 
-void DrawingBoard::set_transparent(bool transparent)
+void DrawingBoard::setTransparent(bool transparent)
 {
     this->transparent = transparent;
-    repaint();
+//    clear();
 }
 
 void showMouseEvent(std::string label, QMouseEvent * event)
@@ -110,7 +110,7 @@ void DrawingBoard::mouseMoveEvent(QMouseEvent *event)
             return;
 
         QRect area;
-        int w = penDrawing.width();
+        int const w = penDrawing.width();
 
         area.setTop(min(event->y()-w, last.y()-w));
         area.setBottom(max(event->y()+w, last.y()+w));
@@ -127,7 +127,7 @@ void DrawingBoard::mouseMoveEvent(QMouseEvent *event)
 
         last = event->pos();
 
-        repaint(area);
+        update(area);
     }
 }
 
