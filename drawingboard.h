@@ -3,6 +3,7 @@
 
 #include <QMouseEvent>
 #include <QWidget>
+#include <QBitmap>
 #include <QPoint>
 #include <QList>
 #include <QLine>
@@ -17,29 +18,23 @@ private:
 
     QBrush bgTransp;
 
-    QPen penHistory;
-
     QPen penDrawing;
 
     bool transparent;
 
-    QList<QVector<QPoint>*> strokes;
+    QVector<QBrush*> pendingBackgrounds;
 
-    QList<QVector<QPoint>*> undoedStrokes;
+    QVector<QPoint> pendingLines;
 
-    QVector<QPoint> * currentStroke;
+    QPoint last;
 
-    QTimer timer;
+    QPixmap * buffer;
 
 public:
 
     DrawingBoard(QWidget * parent);
 
     ~DrawingBoard();
-
-    void undo();
-
-    void redo();
 
     void clear();
 
@@ -54,6 +49,8 @@ public:
     void wheelEvent(QWheelEvent *event);
 
 protected:
+
+    void paintBackground();
 
     void mouseMoveEvent(QMouseEvent *event);
 

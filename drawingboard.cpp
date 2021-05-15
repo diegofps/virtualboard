@@ -3,14 +3,18 @@
 #include <QGuiApplication>
 #include <QPainter>
 #include <QScreen>
+#include <QBitmap>
 #include <QColor>
 #include <cmath>
 
 #define distance(x0,y0,x1,y1) sqrt(((x1)-(x0))*((x1)-(x0))+((y1)-(y0))*((y1)-(y0)))
+#define min(a,b) ((a)<(b)?(a):(b))
+#define max(a,b) ((a)>(b)?(a):(b))
+
 
 DrawingBoard::DrawingBoard(QWidget * parent) :
     QWidget(parent),
-    currentStroke(new QVector<QPoint>())
+    buffer(nullptr)
 {
     bgTransp.setColor(QColor(255, 255, 255, 10));
     bgTransp.setStyle(Qt::BrushStyle::SolidPattern);
@@ -18,13 +22,14 @@ DrawingBoard::DrawingBoard(QWidget * parent) :
     bgFill.setColor(QColor(255, 255, 255, 255));
     bgFill.setStyle(Qt::BrushStyle::SolidPattern);
 
-    penHistory.setColor(QColor(200, 0, 0, 255));
-    penHistory.setWidth(5);
-
     penDrawing.setColor(QColor(200, 0, 0, 255));
+    penDrawing.setCapStyle(Qt::PenCapStyle::RoundCap);
     penDrawing.setWidth(5);
 
-//    setBackgroundRole(QPalette::Base);
+//    setAutoBufferSwap(false);
+    setAutoFillBackground(false);
+    setBackgroundRole(QPalette::Base);
+    setAttribute(Qt::WA_TranslucentBackground);
 
 //    connect(&timer, SIGNAL(timeout()), this, SLOT(repaint()));
 //    timer.start(50);
@@ -32,86 +37,33 @@ DrawingBoard::DrawingBoard(QWidget * parent) :
 
 DrawingBoard::~DrawingBoard()
 {
-    for (int i=0;i!=strokes.size();++i)
-        delete strokes[i];
 
-    for (int i=0;i!=undoedStrokes.size();++i)
-        delete undoedStrokes[i];
-}
-
-void DrawingBoard::undo()
-{
-    if (strokes.isEmpty())
-        return;
-
-    auto * const stroke = strokes.back();
-    strokes.pop_back();
-
-    undoedStrokes.append(stroke);
-    repaint();
-}
-
-void DrawingBoard::redo()
-{
-    if (undoedStrokes.isEmpty())
-        return;
-
-    auto * const stroke = undoedStrokes.back();
-    undoedStrokes.pop_back();
-
-    strokes.append(stroke);
-    repaint();
 }
 
 void DrawingBoard::clear()
 {
-    for (auto & s : strokes)
-        delete s;
-
-    for (auto & s : undoedStrokes)
-        delete s;
-
-    strokes.clear();
-    undoedStrokes.clear();
-    currentStroke->clear();
+    paintBackground();
     repaint();
 }
 
 void DrawingBoard::paintEvent(QPaintEvent *)
 {
-    QPainter painter(this);
+    if (buffer == nullptr)
+    {
+        buffer = new QPixmap(QSize(width(), height()));
+        paintBackground();
+    }
 
-    // Draw background
+    QPainter painter2(this);
+    painter2.drawImage(QPoint(0,0), buffer->toImage());
+}
+
+void DrawingBoard::paintBackground()
+{
     if (transparent)
-    {
-//        qInfo("Drawing transparent bg");
-        painter.setBrush(bgTransp);
-        painter.setPen(Qt::NoPen);
-        painter.drawRect(0, 0, width(), height());
-    }
+        buffer->fill(bgTransp.color());
     else
-    {
-//        qInfo("Drawing filled bg");
-        painter.setBrush(bgFill);
-        painter.setPen(Qt::NoPen);
-        painter.drawRect(0, 0, width(), height());
-    }
-
-    // Draw lines
-//    qInfo("Drawing lines");
-    painter.setBrush(Qt::NoBrush);
-    painter.setPen(penHistory);
-
-    for (int i=0;i!=strokes.size();++i)
-    {
-//        qInfo("Drawing stroke %d with %d points", i, strokes[i]->size());
-        painter.drawPolyline(strokes[i]->data(), strokes[i]->size());
-    }
-
-//    qInfo("Drawing currentStroke with %d points", currentStroke->size());
-    painter.setBrush(Qt::NoBrush);
-    painter.setPen(penDrawing);
-    painter.drawPolyline(currentStroke->data(), currentStroke->size());
+        buffer->fill(bgFill.color());
 }
 
 void DrawingBoard::set_transparent(bool transparent)
@@ -139,13 +91,10 @@ void DrawingBoard::mousePressEvent(QMouseEvent *event)
     showMouseEvent("press", event);
 
     if (event->buttons() & Qt::LeftButton)
-        currentStroke->append(QPoint(event->x(), event->y()));
-
-    else if (event->buttons() & Qt::BackButton)
-        undo();
-
-    else if (event->buttons() & Qt::ForwardButton)
-        redo();
+    {
+        last.setX(event->x());
+        last.setY(event->y());
+    }
 
     else if (event->buttons() & Qt::MiddleButton)
         clear();
@@ -157,27 +106,34 @@ void DrawingBoard::mouseMoveEvent(QMouseEvent *event)
 
     if (event->buttons() & Qt::LeftButton)
     {
-        currentStroke->append(QPoint(event->x(), event->y()));
-        qInfo("Current size: %d", currentStroke->size());
-        repaint();
+        if (buffer == nullptr)
+            return;
+
+        QRect area;
+        int w = penDrawing.width();
+
+        area.setTop(min(event->y()-w, last.y()-w));
+        area.setBottom(max(event->y()+w, last.y()+w));
+
+        area.setLeft(min(event->x()-w, last.x()-w));
+        area.setRight(max(event->x()+w, last.x()+w));
+
+        QPainter painter(buffer);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.setClipRect(area);
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(penDrawing);
+        painter.drawLine(last, event->pos());
+
+        last = event->pos();
+
+        repaint(area);
     }
 }
 
 void DrawingBoard::mouseReleaseEvent(QMouseEvent *event)
 {
     showMouseEvent("release", event);
-
-    if (!currentStroke->isEmpty())
-    {
-        strokes.append(currentStroke);
-        currentStroke = new QVector<QPoint>();
-
-        for (int i=0;i!=undoedStrokes.size();++i)
-            delete undoedStrokes[i];
-
-        undoedStrokes.clear();
-        repaint();
-    }
 }
 
 void DrawingBoard::mouseDoubleClickEvent(QMouseEvent *event)
@@ -189,6 +145,5 @@ void DrawingBoard::wheelEvent(QWheelEvent *event)
 {
     QPoint numPixels = event->pixelDelta();
     QPoint numDegrees = event->angleDelta() / 8;
-
     qInfo("wheel: %d %d, %d %d", numPixels.x(), numPixels.y(), numDegrees.x(), numDegrees.y());
 }
