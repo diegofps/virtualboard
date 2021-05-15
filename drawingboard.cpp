@@ -14,62 +14,80 @@
 
 DrawingBoard::DrawingBoard(QWidget * parent) :
     QWidget(parent),
-    buffer(nullptr)
+    backgroundIdd(1),
+    buffer0(nullptr)
 {
-    bgTransp.setColor(QColor(255, 255, 255, 10));
-    bgTransp.setStyle(Qt::BrushStyle::SolidPattern);
+    bgImage.load(":/images/backgrounds/paper8.jpg");
 
-    bgFill.setColor(QColor(255, 255, 255, 255));
-    bgFill.setStyle(Qt::BrushStyle::SolidPattern);
+    pen0.setColor(QColor("#2f5fb6"));
+    pen0.setCapStyle(Qt::PenCapStyle::RoundCap);
+    pen0.setWidth(5);
 
-    penDrawing.setColor(QColor(200, 0, 0, 255));
-    penDrawing.setCapStyle(Qt::PenCapStyle::RoundCap);
-    penDrawing.setWidth(5);
-
-//    setAutoBufferSwap(false);
-    setAutoFillBackground(false);
     setBackgroundRole(QPalette::Base);
-    setAttribute(Qt::WA_TranslucentBackground);
-
-//    connect(&timer, SIGNAL(timeout()), this, SLOT(repaint()));
-//    timer.start(50);
 }
 
 DrawingBoard::~DrawingBoard()
 {
-
+    if (buffer0 != nullptr)
+        delete buffer0;
 }
 
 void DrawingBoard::clear()
 {
-    paintBackground();
+    buffer0->fill(Qt::transparent);
     repaint();
+}
+
+void DrawingBoard::undo()
+{
+
+}
+
+void DrawingBoard::redo()
+{
+
 }
 
 void DrawingBoard::paintEvent(QPaintEvent *)
 {
-    if (buffer == nullptr)
+    if (buffer0 == nullptr)
     {
-        buffer = new QPixmap(QSize(width(), height()));
-        paintBackground();
+        buffer0 = new QPixmap(QSize(width(), height()));
+        buffer0->fill(Qt::transparent);
     }
 
-    QPainter painter2(this);
-    painter2.drawImage(QPoint(0,0), buffer->toImage());
-}
+    else if (buffer0->rect() != rect())
+    {
+        delete buffer0;
+        buffer0 = new QPixmap(QSize(width(), height()));
+        buffer0->fill(Qt::transparent);
+    }
 
-void DrawingBoard::paintBackground()
-{
-    if (transparent)
-        buffer->fill(bgTransp.color());
+    QPainter painter(this);
+
+    if (backgroundIdd == 0)
+    {
+        painter.setPen(pen0);
+        painter.drawRect(this->rect());
+//        painter.fillRect(this->rect(), QColor(255, 255, 255, 10));
+        painter.drawPixmap(this->rect(), *buffer0, buffer0->rect());
+    }
     else
-        buffer->fill(bgFill.color());
+    {
+        painter.drawPixmap(this->rect(), bgImage, bgImage.rect());
+        painter.drawPixmap(this->rect(), *buffer0, buffer0->rect());
+    }
 }
 
-void DrawingBoard::setTransparent(bool transparent)
+void DrawingBoard::setBackground(int idd)
 {
-    this->transparent = transparent;
-//    clear();
+    this->backgroundIdd = idd;
+    repaint();
+}
+
+int DrawingBoard::background()
+{
+    return backgroundIdd;
 }
 
 void showMouseEvent(std::string label, QMouseEvent * event)
@@ -106,11 +124,11 @@ void DrawingBoard::mouseMoveEvent(QMouseEvent *event)
 
     if (event->buttons() & Qt::LeftButton)
     {
-        if (buffer == nullptr)
+        if (buffer0 == nullptr)
             return;
 
         QRect area;
-        int const w = penDrawing.width();
+        int const w = pen0.width();
 
         area.setTop(min(event->y()-w, last.y()-w));
         area.setBottom(max(event->y()+w, last.y()+w));
@@ -118,11 +136,11 @@ void DrawingBoard::mouseMoveEvent(QMouseEvent *event)
         area.setLeft(min(event->x()-w, last.x()-w));
         area.setRight(max(event->x()+w, last.x()+w));
 
-        QPainter painter(buffer);
+        QPainter painter(buffer0);
+        painter.setPen(pen0);
         painter.setRenderHint(QPainter::Antialiasing, true);
         painter.setClipRect(area);
         painter.setBrush(Qt::NoBrush);
-        painter.setPen(penDrawing);
         painter.drawLine(last, event->pos());
 
         last = event->pos();

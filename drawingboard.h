@@ -14,13 +14,11 @@ class DrawingBoard : public QWidget
 {
 private:
 
-    QBrush bgFill;
+    QPixmap bgImage;
 
-    QBrush bgTransp;
+    QPen pen0;
 
-    QPen penDrawing;
-
-    bool transparent;
+    int backgroundIdd;
 
     QVector<QBrush*> pendingBackgrounds;
 
@@ -28,7 +26,7 @@ private:
 
     QPoint last;
 
-    QPixmap * buffer;
+    QPixmap * buffer0;
 
 public:
 
@@ -40,17 +38,21 @@ public:
 
     void paintEvent(QPaintEvent *);
 
-    void setTransparent(bool transparent);
-
     void mouseReleaseEvent(QMouseEvent *event);
 
     void mouseDoubleClickEvent(QMouseEvent *event);
 
     void wheelEvent(QWheelEvent *event);
 
-protected:
+    void undo();
 
-    void paintBackground();
+    void redo();
+
+    void setBackground(int idd);
+
+    int background();
+
+protected:
 
     void mouseMoveEvent(QMouseEvent *event);
 

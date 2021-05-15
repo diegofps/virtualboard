@@ -17,7 +17,19 @@ public:
 
     ~MainWindow();
 
-    void show(bool transparent);
+    void show();
+
+public slots:
+
+    void clearCanvas();
+
+    void undoCanvas();
+
+    void redoCanvas();
+
+    void showTransparent();
+
+    void showOpaque();
 
 private:
 

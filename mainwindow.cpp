@@ -14,7 +14,6 @@ MainWindow::MainWindow(QWidget *parent)
                 Qt::Dialog |
                 Qt::MSWindowsFixedSizeDialogHint |
                 Qt::FramelessWindowHint |
-                Qt::WindowStaysOnTopHint |
                 Qt::X11BypassWindowManagerHint);
 
     setAttribute(Qt::WA_NoSystemBackground, true);
@@ -23,6 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
     setAttribute(Qt::WA_ShowWithoutActivating, true);
 
     setParent(nullptr);
+    setCursor(Qt::CrossCursor);
 
 //    this->setWindowState(Qt::WindowFullScreen);
 
@@ -34,10 +34,8 @@ MainWindow::~MainWindow()
 }
 
 
-void MainWindow::show(bool transparent)
+void MainWindow::show()
 {
-    this->ui->board->setTransparent(transparent);
-
     QPoint cursor = QCursor::pos();
 
     QList<QScreen*> screens = QGuiApplication::screens();
@@ -45,29 +43,16 @@ void MainWindow::show(bool transparent)
     if (screens.isEmpty())
         return;
 
-    qInfo("mouse: %d %d", cursor.x(), cursor.y());
-    for (int i=0;i!=screens.size();++i)
-    {
-        auto const & geometry = screens[i]->geometry();
-        qInfo("screen %d at %d, %d with %d, %d", i, geometry.topLeft().x(), geometry.topLeft().y(), geometry.width(), geometry.height());
-    }
-
     for (int i=0;i!=screens.size();++i)
     {
         auto const & geometry = screens[i]->geometry();
 
         if (!geometry.contains(cursor))
-        {
-            qInfo("Mouse not inside screen %d", i);
             continue;
-        }
-        else
-            qInfo("Inside screen %d", i);
 
         QMainWindow::show();
         this->resize(geometry.width(), geometry.height());
         this->move(geometry.topLeft());
-        qInfo("Moving to %d, %d", geometry.topLeft().x(), geometry.topLeft().y());
         return;
     }
 
@@ -75,4 +60,31 @@ void MainWindow::show(bool transparent)
     auto const & geometry = screens.front()->geometry();
     this->resize(geometry.width(), geometry.height());
     this->move(geometry.topLeft());
+}
+
+void MainWindow::showTransparent()
+{
+    this->ui->board->setBackground(0);
+    this->show();
+}
+
+void MainWindow::showOpaque()
+{
+    this->ui->board->setBackground(1);
+    this->show();
+}
+
+void MainWindow::clearCanvas()
+{
+    this->ui->board->clear();
+}
+
+void MainWindow::undoCanvas()
+{
+    this->ui->board->undo();
+}
+
+void MainWindow::redoCanvas()
+{
+    this->ui->board->redo();
 }
