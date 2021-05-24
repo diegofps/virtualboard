@@ -5,7 +5,10 @@
 #include <QScreen>
 #include <QBitmap>
 #include <QColor>
+#include <QDebug>
 #include <cmath>
+
+#include "context.h"
 
 #define distance(x0,y0,x1,y1) sqrt(((x1)-(x0))*((x1)-(x0))+((y1)-(y0))*((y1)-(y0)))
 #define min(a,b) ((a)<(b)?(a):(b))
@@ -15,61 +18,58 @@
 DrawingBoard::DrawingBoard(QWidget * parent) :
     QWidget(parent),
     backgroundIdd(1),
-    buffer0(nullptr)
+    mHasChanges(false),
+    mTimestamp(time(NULL))
 {
     bgImage.load(":/images/backgrounds/paper8.jpg");
 
-    pen0.setColor(QColor("#2f5fb6"));
-    pen0.setCapStyle(Qt::PenCapStyle::RoundCap);
-    pen0.setWidth(5);
+    penBorder.setColor(QColor("#f3f3f3"));
+
+    penBrush.setCapStyle(Qt::PenCapStyle::RoundCap);
+
+    penEraser.setColor(QColor(0, 0, 0, 0));
+    penEraser.setCapStyle(Qt::PenCapStyle::RoundCap);
 
     setBackgroundRole(QPalette::Base);
+
+    context.color1.addListener(this, [&](QColor const & color) {
+        penBrush.setColor(color);
+    });
+
+    context.brushSize.addListener(this, [&](int const & size) {
+        penBrush.setWidth(size);
+    });
+
+    context.eraserSize.addListener(this, [&](int const & size) {
+        penEraser.setWidth(size);
+    });
+
+    context.backgroundType.addListener(this, [&](int const & type) {
+        backgroundIdd = type;
+        repaint();
+    });
+
+    context.canvas.addListener(this, [&](QPixmap* const & page) {
+        qInfo() << "Board has received a new canvas, size=" << page->width() << "," << page->height();
+        buffer0 = page;
+        update();
+    });
 }
 
 DrawingBoard::~DrawingBoard()
-{
-    if (buffer0 != nullptr)
-        delete buffer0;
-}
-
-void DrawingBoard::clear()
-{
-    buffer0->fill(Qt::transparent);
-    repaint();
-}
-
-void DrawingBoard::undo()
-{
-
-}
-
-void DrawingBoard::redo()
 {
 
 }
 
 void DrawingBoard::paintEvent(QPaintEvent *)
 {
-    if (buffer0 == nullptr)
-    {
-        buffer0 = new QPixmap(QSize(width(), height()));
-        buffer0->fill(Qt::transparent);
-    }
-
-    else if (buffer0->rect() != rect())
-    {
-        delete buffer0;
-        buffer0 = new QPixmap(QSize(width(), height()));
-        buffer0->fill(Qt::transparent);
-    }
-
     QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, true);
 
     if (backgroundIdd == 0)
     {
-        painter.setPen(pen0);
+        painter.setPen(penBorder);
         painter.drawRect(this->rect());
-//        painter.fillRect(this->rect(), QColor(255, 255, 255, 10));
         painter.drawPixmap(this->rect(), *buffer0, buffer0->rect());
     }
     else
@@ -77,17 +77,6 @@ void DrawingBoard::paintEvent(QPaintEvent *)
         painter.drawPixmap(this->rect(), bgImage, bgImage.rect());
         painter.drawPixmap(this->rect(), *buffer0, buffer0->rect());
     }
-}
-
-void DrawingBoard::setBackground(int idd)
-{
-    this->backgroundIdd = idd;
-    repaint();
-}
-
-int DrawingBoard::background()
-{
-    return backgroundIdd;
 }
 
 void showMouseEvent(std::string label, QMouseEvent * event)
@@ -106,62 +95,66 @@ void showMouseEvent(std::string label, QMouseEvent * event)
 
 void DrawingBoard::mousePressEvent(QMouseEvent *event)
 {
-    showMouseEvent("press", event);
+//    showMouseEvent("press", event);
 
-    if (event->buttons() & Qt::LeftButton)
+    last = event->pos();
+
+    if (event->buttons() & Qt::MiddleButton)
+        setCursor(Qt::PointingHandCursor);
+
+    else if (event->buttons() & Qt::RightButton)
     {
-        last.setX(event->x());
-        last.setY(event->y());
+        if (!context.isMenuVisible())
+            context.setMenuPosition(mapToGlobal(event->pos()));
+        context.setMenuVisible(!context.isMenuVisible());
     }
-
-    else if (event->buttons() & Qt::MiddleButton)
-        clear();
 }
 
 void DrawingBoard::mouseMoveEvent(QMouseEvent *event)
 {
-    showMouseEvent("move", event);
+//    showMouseEvent("move", event);
 
-    if (event->buttons() & Qt::LeftButton)
-    {
-        if (buffer0 == nullptr)
-            return;
+    if (!(event->buttons() & Qt::LeftButton || cursor() == Qt::PointingHandCursor))
+        return;
 
-        QRect area;
-        int const w = pen0.width();
+//    if (distance(last.x(), last.y(), event->x(), event->y()) < 10)
+//        return;
 
-        area.setTop(min(event->y()-w, last.y()-w));
-        area.setBottom(max(event->y()+w, last.y()+w));
+    QRect area;
+    QPen & pen = cursor() == Qt::CrossCursor ? penBrush : penEraser;
+    int const w = pen.width();
 
-        area.setLeft(min(event->x()-w, last.x()-w));
-        area.setRight(max(event->x()+w, last.x()+w));
+    area.setTop(min(event->y()-w, last.y()-w));
+    area.setBottom(max(event->y()+w, last.y()+w));
 
-        QPainter painter(buffer0);
-        painter.setPen(pen0);
-        painter.setRenderHint(QPainter::Antialiasing, true);
-        painter.setClipRect(area);
-        painter.setBrush(Qt::NoBrush);
-        painter.drawLine(last, event->pos());
+    area.setLeft(min(event->x()-w, last.x()-w));
+    area.setRight(max(event->x()+w, last.x()+w));
 
-        last = event->pos();
+    QPainter painter(buffer0);
+    painter.setRenderHint(QPainter::Antialiasing, true);
 
-        update(area);
-    }
+    if (cursor() == Qt::PointingHandCursor)
+        painter.setCompositionMode(QPainter::CompositionMode_Clear);
+
+    double const ww = buffer0->width() / double(width());
+    double const hh = buffer0->height() / double(height());
+
+    QPoint p1(round(last.x() * ww), round(last.y() * hh));
+    QPoint p2(round(event->x() * ww), round(event->y() * hh));
+
+    painter.setBrush(Qt::NoBrush);
+    painter.setPen(pen);
+//    painter.setClipRect(area);
+    painter.drawLine(p1, p2);
+
+    update(area);
+
+    last = event->pos();
+
+    context.setHasChanges();
 }
 
-void DrawingBoard::mouseReleaseEvent(QMouseEvent *event)
+void DrawingBoard::mouseReleaseEvent(QMouseEvent *)
 {
-    showMouseEvent("release", event);
-}
-
-void DrawingBoard::mouseDoubleClickEvent(QMouseEvent *event)
-{
-    showMouseEvent("doubleClick", event);
-}
-
-void DrawingBoard::wheelEvent(QWheelEvent *event)
-{
-    QPoint numPixels = event->pixelDelta();
-    QPoint numDegrees = event->angleDelta() / 8;
-    qInfo("wheel: %d %d, %d %d", numPixels.x(), numPixels.y(), numDegrees.x(), numDegrees.y());
+    setCursor(Qt::CrossCursor);
 }

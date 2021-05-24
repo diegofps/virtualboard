@@ -2,6 +2,12 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QShortcut>
+#include <QStackedLayout>
+
+#include "drawingboard.h"
+#include "context.h"
+#include "menudialog.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -19,21 +25,32 @@ public:
 
     void show();
 
-public slots:
-
-    void clearCanvas();
-
-    void undoCanvas();
-
-    void redoCanvas();
-
-    void showTransparent();
-
-    void showOpaque();
+    void moveEvent(QMoveEvent *event);
 
 private:
 
     Ui::MainWindow *ui;
 
+    DrawingBoard * mBoard;
+
+    MenuDialog * mMenuDialog;
+
+    QShortcut newNotebookShortcut;
+    QShortcut openNotebookShortcut;
+    QShortcut saveNotebookShortcut;
+    QShortcut saveNotebookAsShortcut;
+    QShortcut exportNotebookAsShortcut;
+
+    QShortcut hideMainWindowShortcut;
+    QShortcut toggleMenuVisibilityShortcut;
+
+    QShortcut clearPageShortcut;
+    QShortcut deletePageShortcut;
+    QShortcut nextPageShortcut;
+    QShortcut previousPageShortcut;
+    QShortcut firstPageShortcut;
+    QShortcut lastPageShortcut;
+
 };
+
 #endif // MAINWINDOW_H

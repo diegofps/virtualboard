@@ -1,11 +1,12 @@
 #include "mainwindow.h"
+#include "context.h"
 
 #include <QApplication>
 #include <iostream>
 #include <thread>
 
 void
-move2(MainWindow * w)
+readInput()
 {
     char cmd;
 
@@ -15,40 +16,36 @@ move2(MainWindow * w)
 
         if (cmd == 'o')
         {
-            QMetaObject::invokeMethod(w, "showOpaque", Qt::AutoConnection);
-//            w->toggleMode(1);
+            context.setOpaqueBackground();
+            context.toggleWindowVisibility();
         }
 
         else if (cmd == 't')
         {
-            QMetaObject::invokeMethod(w, "showTransparent", Qt::AutoConnection);
-//            w->toggleMode(0);
+            context.setTransparentBackground();
+            context.toggleWindowVisibility();
         }
 
         else if (cmd == 'h')
         {
-            QMetaObject::invokeMethod(w, "hide", Qt::AutoConnection);
-//            w->redoCanvas();
+            context.setWindowVisible(false);
+            context.setMenuVisible(false);
         }
 
         else if (cmd == 'c')
-        {
-            QMetaObject::invokeMethod(w, "clearCanvas", Qt::AutoConnection);
-            //w->clearCanvas();
-        }
+            context.clearPage();
 
         else if (cmd == 'u')
-        {
-            QMetaObject::invokeMethod(w, "undoCanvas", Qt::AutoConnection);
-//            w->undoCanvas();
-        }
+            context.undo();
 
         else if (cmd == 'r')
-        {
-            QMetaObject::invokeMethod(w, "redoCanvas", Qt::AutoConnection);
-//            w->redoCanvas();
-        }
+            context.redo();
 
+        else if (cmd == 'n')
+            context.nextPage();
+
+        else if (cmd == 'p')
+            context.previousPage();
     }
 }
 
@@ -57,11 +54,13 @@ int main(int argc, char *argv[])
     qputenv("QT_XCB_TABLET_LEGACY_COORDINATES", "");
 
     QApplication a(argc, argv);
+    context.init();
+
     MainWindow w;
 
 //    w.show();
 
-    std::thread t(move2, &w);
+    std::thread t(readInput);
 
     return a.exec();
 }

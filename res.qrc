@@ -2,4 +2,16 @@
     <qresource prefix="/images">
         <file>backgrounds/paper8.jpg</file>
     </qresource>
+    <qresource prefix="/icons">
+        <file>icons/new.svg</file>
+        <file>icons/background.svg</file>
+        <file>icons/erase.svg</file>
+        <file>icons/export.svg</file>
+        <file>icons/first.svg</file>
+        <file>icons/last.svg</file>
+        <file>icons/next.svg</file>
+        <file>icons/open.svg</file>
+        <file>icons/previous.svg</file>
+        <file>icons/save.svg</file>
+    </qresource>
 </RCC>

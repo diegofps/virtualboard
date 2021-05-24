@@ -10,13 +10,20 @@
 #include <QPen>
 #include <QTimer>
 
+#include "menu.h"
+#include "context.h"
+
 class DrawingBoard : public QWidget
 {
 private:
 
     QPixmap bgImage;
 
-    QPen pen0;
+    QPen penBorder;
+
+    QPen penBrush;
+
+    QPen penEraser;
 
     int backgroundIdd;
 
@@ -28,29 +35,19 @@ private:
 
     QPixmap * buffer0;
 
+    bool mHasChanges;
+
+    int64_t mTimestamp;
+
 public:
 
-    DrawingBoard(QWidget * parent);
+    DrawingBoard(QWidget * parent = nullptr);
 
     ~DrawingBoard();
-
-    void clear();
 
     void paintEvent(QPaintEvent *);
 
     void mouseReleaseEvent(QMouseEvent *event);
-
-    void mouseDoubleClickEvent(QMouseEvent *event);
-
-    void wheelEvent(QWheelEvent *event);
-
-    void undo();
-
-    void redo();
-
-    void setBackground(int idd);
-
-    int background();
 
 protected:
 
