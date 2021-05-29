@@ -4,6 +4,7 @@
 #include <QVector>
 #include <QColor>
 #include <QPixmap>
+#include <QScreen>
 #include <QTemporaryDir>
 
 class Context;
@@ -137,6 +138,8 @@ private:
 
     QTemporaryDir tempDir;
 
+    QScreen * screen;
+
 public:
 
     Context();
@@ -188,17 +191,15 @@ public slots:
 
     void setWindowVisible(bool value);
 
+    void setBackgroundType(int type);
+
+    void setCanvasSize(QSize size);
+
     void toggleWindowVisibility();
 
     void toggleMenuVisibility();
 
     void toggleBackgroundType();
-
-    void setOpaqueBackground();
-
-    void setTransparentBackground();
-
-    void setCanvasSize(QSize size);
 
     void undo();
 
@@ -231,6 +232,10 @@ public slots:
     void openNotebookSafe(QWidget *parent);
 
     void saveNotebookSafe(QWidget *parent);
+
+    void saveNotebookAsSafe(QWidget *parent);
+
+    void exportNotebook(QWidget *parent);
 
 public:
 

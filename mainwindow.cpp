@@ -11,6 +11,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , mMenuDialog(new MenuDialog(this))
+    , screen(nullptr)
 
     , newNotebookShortcut(QKeySequence(tr("Ctrl+N", "New notebook")), this)
     , openNotebookShortcut(QKeySequence(tr("Ctrl+O", "Open notebook")), this)
@@ -46,12 +47,12 @@ MainWindow::MainWindow(QWidget *parent)
             mMenuDialog->hide();
     });
 
-    context.isWindowVisible.addListener(this, [&](bool const & newValue) {
-        if (newValue)
-            show();
-        else
-            hide();
-    });
+//    context.isWindowVisible.addListener(this, [&](bool const & newValue) {
+//        if (newValue)
+//            show();
+//        else
+//            hide();
+//    });
 
     connect(&newNotebookShortcut, &QShortcut::activated, [&]() { context.newNotebookSafe(this); });
     connect(&openNotebookShortcut, &QShortcut::activated, [&]() { context.openNotebookSafe(this); });
@@ -60,9 +61,9 @@ MainWindow::MainWindow(QWidget *parent)
 //    connect(&exportNotebookAsShortcut, &QShortcut::activated, [&]() { context.exportNotebookAsSafe(this); });
 
     connect(&toggleMenuVisibilityShortcut, &QShortcut::activated, &context, &Context::toggleMenuVisibility);
-    connect(&hideMainWindowShortcut, &QShortcut::activated, []() {
-        context.setWindowVisible(false);
+    connect(&hideMainWindowShortcut, &QShortcut::activated, [&]() {
         context.setMenuVisible(false);
+        hide();
     });
 
     connect(&clearPageShortcut, &QShortcut::activated, &context, &Context::clearPage);
@@ -84,6 +85,78 @@ MainWindow::~MainWindow()
 void MainWindow::moveEvent(QMoveEvent *)
 {
 //    show();
+}
+
+
+QScreen * getCursorScreen()
+{
+    QList<QScreen*> screens = QGuiApplication::screens();
+
+    if (screens.isEmpty())
+        return nullptr;
+
+    QPoint cursor = QCursor::pos();
+
+    for (int i=0;i!=screens.size();++i)
+        if (screens[i]->geometry().contains(cursor))
+            return screens[i];
+
+    return screens[0];
+}
+
+void MainWindow::showWindowWithBackgroundType(int background)
+{
+    QScreen * newScreen = getCursorScreen();
+
+    if (isVisible())
+    {
+        bool sameScreen = newScreen == screen;
+        bool sameBackground = background == context.backgroundType();
+
+        if (sameScreen)
+        {
+            if (sameBackground)
+            {
+                screen = nullptr;
+                hide();
+            }
+            else
+            {
+                context.setBackgroundType(background);
+            }
+        }
+        else
+        {
+            screen = newScreen;
+            context.setCanvasSize(screen->size());
+
+            hide();
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+            if (!sameBackground)
+                context.setBackgroundType(background);
+
+            windowHandle()->setScreen(screen);
+            resize(100,100);
+            show();
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            showMaximized();
+        }
+    }
+
+    else
+    {
+        screen = newScreen;
+        context.setBackgroundType(background);
+        context.setCanvasSize(screen->size());
+
+        if (context.canvas()->width() == 0)
+            context.newNotebook();
+
+        showMaximized();
+        windowHandle()->setScreen(screen);
+    }
 }
 
 void MainWindow::show()

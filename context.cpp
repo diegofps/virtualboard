@@ -3,12 +3,15 @@
 #include <QDirIterator>
 #include <QTextStream>
 #include <QDateTime>
+#include <QScreen>
+#include <QWindow>
 #include <QDebug>
 #include <QFile>
 #include <QDir>
 
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QGuiApplication>
 
 Context context;
 
@@ -40,6 +43,7 @@ void Context::init()
     canvas = new QPixmap();
     canvasSize = QSize(1920, 1080);
     tempFolder = tempDir.path();
+    screen = nullptr;
 
     QDir path1(QDir::homePath() + "/MEGA");
     QDir path2(QDir::homePath() + "/Dropbox");
@@ -110,20 +114,12 @@ void Context::toggleMenuVisibility()
 
 void Context::toggleBackgroundType()
 {
-    if (backgroundType() == 0)
-        setOpaqueBackground();
-    else
-        setTransparentBackground();
+    backgroundType = backgroundType() == 0 ? 1 : 0;
 }
 
-void Context::setOpaqueBackground()
+void Context::setBackgroundType(int type)
 {
-    backgroundType = 1;
-}
-
-void Context::setTransparentBackground()
-{
-    backgroundType = 0;
+    backgroundType = type;
 }
 
 void Context::setCanvasSize(QSize size)
@@ -523,4 +519,14 @@ void Context::saveNotebookSafe(QWidget * parent)
     {
         context.saveNotebook();
     }
+}
+
+void Context::saveNotebookAsSafe(QWidget * parent)
+{
+
+}
+
+void Context::exportNotebook(QWidget * parent)
+{
+
 }

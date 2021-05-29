@@ -27,6 +27,10 @@ public:
 
     void moveEvent(QMoveEvent *event);
 
+public slots:
+
+    void showWindowWithBackgroundType(int background);
+
 private:
 
     Ui::MainWindow *ui;
@@ -34,6 +38,8 @@ private:
     DrawingBoard * mBoard;
 
     MenuDialog * mMenuDialog;
+
+    QScreen * screen;
 
     QShortcut newNotebookShortcut;
     QShortcut openNotebookShortcut;

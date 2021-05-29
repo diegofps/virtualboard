@@ -24,6 +24,7 @@ DrawingBoard::DrawingBoard(QWidget * parent) :
     bgImage.load(":/images/backgrounds/paper8.jpg");
 
     penBorder.setColor(QColor("#f3f3f3"));
+    penBorder.setWidth(3);
 
     penBrush.setCapStyle(Qt::PenCapStyle::RoundCap);
 
