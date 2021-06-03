@@ -51,7 +51,7 @@ DrawingBoard::DrawingBoard(QWidget * parent) :
     });
 
     context.canvas.addListener(this, [&](QPixmap* const & page) {
-        qInfo() << "Board has received a new canvas, size=" << page->width() << "," << page->height();
+//        qInfo() << "Board has received a new canvas, size=" << page->width() << "," << page->height();
         buffer0 = page;
         update();
     });
